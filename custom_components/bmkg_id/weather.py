@@ -10,6 +10,7 @@ from homeassistant.components.weather import (
     WeatherEntityFeature,
 )
 from homeassistant.const import (
+    UnitOfLength,
     UnitOfPrecipitationDepth,
     UnitOfSpeed,
     UnitOfTemperature,
@@ -56,8 +57,11 @@ class BmkgWeatherEntity(BmkgEntity, WeatherEntity):
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_native_wind_speed_unit = UnitOfSpeed.KILOMETERS_PER_HOUR
     _attr_native_precipitation_unit = UnitOfPrecipitationDepth.MILLIMETERS
+    _attr_native_visibility_unit = UnitOfLength.METERS
     _attr_supported_features = WeatherEntityFeature.FORECAST_HOURLY
     _attr_name = None  # device name is the entity name
+    _attr_latitude = None
+    _attr_longitude = None
 
     def __init__(self, coordinator) -> None:
         """Initialize weather entity."""

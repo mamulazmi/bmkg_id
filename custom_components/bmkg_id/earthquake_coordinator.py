@@ -47,10 +47,19 @@ class BmkgEarthquakeCoordinator(DataUpdateCoordinator):
         ha_lon: float = self.hass.config.longitude
 
         client = self.config_entry.runtime_data.earthquake_client
-        nearest = client.find_nearest(earthquakes, ha_lat, ha_lon)
+
+        def with_distance(quake: dict[str, Any]) -> dict[str, Any]:
+            coords = client.parse_coordinates(quake.get("Coordinates", ""))
+            if coords is None:
+                return quake
+            dist = client.haversine_km(ha_lat, ha_lon, coords[0], coords[1])
+            return {**quake, "_distance_km": round(dist, 1)}
+
+        earthquakes_with_dist = [with_distance(q) for q in earthquakes]
+        nearest = client.find_nearest(earthquakes_with_dist, ha_lat, ha_lon)
 
         # Latest = first in list (API returns newest first)
-        latest = earthquakes[0] if earthquakes else None
+        latest = earthquakes_with_dist[0] if earthquakes_with_dist else None
 
         def with_shakemap(quake: dict[str, Any] | None) -> dict[str, Any] | None:
             if quake is None:
@@ -62,7 +71,7 @@ class BmkgEarthquakeCoordinator(DataUpdateCoordinator):
             return result
 
         return {
-            "earthquakes": earthquakes,
+            "earthquakes": earthquakes_with_dist,
             "nearest": with_shakemap(nearest),
             "latest": with_shakemap(latest),
             "ha_lat": ha_lat,

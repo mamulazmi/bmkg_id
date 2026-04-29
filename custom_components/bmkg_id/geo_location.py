@@ -58,7 +58,9 @@ class BmkgEarthquakeGeoLocation(CoordinatorEntity[BmkgEarthquakeCoordinator], Ge
         self._lat, self._lon = coords if coords else (None, None)
         self._quake = quake
         self._attr_unique_id = f"{adm4}_geo_{quake.get('DateTime', quake.get('Jam', ''))}"
-        self._attr_name = f"Gempa {quake.get('Wilayah', 'Unknown')}"
+        magnitude = quake.get("Magnitude", "")
+        wilayah = quake.get("Wilayah", "Unknown")
+        self._attr_name = f"M{magnitude} · {wilayah}" if magnitude else f"Gempa {wilayah}"
 
     @property
     def latitude(self) -> float | None:
