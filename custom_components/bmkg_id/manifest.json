@@ -1,0 +1,11 @@
+{
+  "domain": "bmkg_id",
+  "name": "BMKG Weather",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/mamulazmi/bmkg_id",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/mamulazmi/bmkg_id/issues",
+  "version": "1.0.0",
+  "requirements": []
+}
