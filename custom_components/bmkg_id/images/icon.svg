@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="100" fill="#003087"/>
+
+  <!-- Cloud body -->
+  <ellipse cx="100" cy="105" rx="52" ry="28" fill="white"/>
+  <circle cx="78" cy="95" r="22" fill="white"/>
+  <circle cx="112" cy="88" r="28" fill="white"/>
+
+  <!-- Lightning bolt -->
+  <polygon points="108,102 96,128 106,128 94,155 120,118 108,118 118,102" fill="#FFD700"/>
+
+  <!-- Text: bmkg_id -->
+  <text x="100" y="185" text-anchor="middle"
+        font-family="Arial, sans-serif" font-size="18" font-weight="bold"
+        letter-spacing="1" fill="white">bmkg_id</text>
+</svg>

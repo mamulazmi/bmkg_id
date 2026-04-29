@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Pengaturan BMKG Weather",
+        "description": "Masukkan kode administrasi ADM4 dari BMKG untuk wilayah Anda.\nContoh: {example_adm4}",
+        "data": {
+          "adm4": "Kode ADM4"
+        }
+      }
+    },
+    "error": {
+      "connection": "Tidak dapat terhubung ke API BMKG. Periksa koneksi internet.",
+      "unknown": "Terjadi kesalahan tak terduga. Periksa log untuk detail."
+    },
+    "abort": {
+      "already_configured": "Lokasi ADM4 ini sudah dikonfigurasi."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ganti Lokasi",
+        "data": {
+          "adm4": "Kode ADM4"
+        }
+      }
+    },
+    "error": {
+      "connection": "Tidak dapat terhubung ke API BMKG.",
+      "unknown": "Terjadi kesalahan tak terduga."
+    }
+  }
+}
