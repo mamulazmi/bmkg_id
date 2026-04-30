@@ -20,9 +20,11 @@
   "options": {
     "step": {
       "init": {
-        "title": "Change Location",
+        "title": "BMKG Weather Settings",
         "data": {
-          "adm4": "ADM4 Code"
+          "adm4": "ADM4 Code",
+          "nowcast_language": "Early Warning Alert Language",
+          "nowcast_update_interval": "Warning Update Interval (minutes)"
         }
       }
     },

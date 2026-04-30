@@ -8,7 +8,7 @@ from homeassistant.const import Platform
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import BmkgApiClient, BmkgEarthquakeApiClient, BmkgNowcastApiClient
-from .const import CONF_ADM4, DOMAIN  # noqa: F401
+from .const import CONF_ADM4, CONF_NOWCAST_LANGUAGE, DEFAULT_NOWCAST_LANGUAGE, DOMAIN  # noqa: F401
 from .coordinator import BmkgDataUpdateCoordinator
 from .data import BmkgData
 from .earthquake_coordinator import BmkgEarthquakeCoordinator
@@ -38,7 +38,10 @@ async def async_setup_entry(
         coordinator=coordinator,
         earthquake_client=BmkgEarthquakeApiClient(session=session),
         earthquake_coordinator=earthquake_coordinator,
-        nowcast_client=BmkgNowcastApiClient(session=session),
+        nowcast_client=BmkgNowcastApiClient(
+            session=session,
+            language=entry.options.get(CONF_NOWCAST_LANGUAGE, DEFAULT_NOWCAST_LANGUAGE),
+        ),
         nowcast_coordinator=nowcast_coordinator,
     )
 

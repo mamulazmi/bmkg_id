@@ -8,7 +8,12 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import BmkgApiClientCommunicationError, BmkgApiClientError
-from .const import DEFAULT_NOWCAST_UPDATE_INTERVAL_MINUTES, DOMAIN, LOGGER
+from .const import (
+    CONF_NOWCAST_INTERVAL,
+    DEFAULT_NOWCAST_UPDATE_INTERVAL_MINUTES,
+    DOMAIN,
+    LOGGER,
+)
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -33,6 +38,15 @@ class BmkgNowcastCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch warnings, filter by user's province."""
+        interval = int(
+            self.config_entry.options.get(
+                CONF_NOWCAST_INTERVAL, DEFAULT_NOWCAST_UPDATE_INTERVAL_MINUTES
+            )
+        )
+        new_interval = timedelta(minutes=interval)
+        if self.update_interval != new_interval:
+            self.update_interval = new_interval
+
         try:
             warnings = (
                 await self.config_entry.runtime_data.nowcast_client.async_get_warnings()

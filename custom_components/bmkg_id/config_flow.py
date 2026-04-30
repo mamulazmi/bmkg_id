@@ -10,7 +10,17 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .api import BmkgApiClient, BmkgApiClientCommunicationError, BmkgApiClientError
-from .const import CONF_ADM4, DOMAIN, LOGGER
+from .const import (
+    CONF_ADM4,
+    CONF_NOWCAST_INTERVAL,
+    CONF_NOWCAST_LANGUAGE,
+    DEFAULT_NOWCAST_LANGUAGE,
+    DEFAULT_NOWCAST_UPDATE_INTERVAL_MINUTES,
+    DOMAIN,
+    LOGGER,
+    MAX_NOWCAST_UPDATE_INTERVAL_MINUTES,
+    MIN_NOWCAST_UPDATE_INTERVAL_MINUTES,
+)
 
 STEP_USER_SCHEMA = vol.Schema(
     {
@@ -104,7 +114,13 @@ class BmkgOptionsFlow(config_entries.OptionsFlow):
                     self._config_entry,
                     data={CONF_ADM4: adm4},
                 )
-                return self.async_create_entry(title="", data={})
+                return self.async_create_entry(title="", data={
+                    CONF_NOWCAST_LANGUAGE: user_input.get(CONF_NOWCAST_LANGUAGE, DEFAULT_NOWCAST_LANGUAGE),
+                    CONF_NOWCAST_INTERVAL: user_input.get(CONF_NOWCAST_INTERVAL, DEFAULT_NOWCAST_UPDATE_INTERVAL_MINUTES),
+                })
+
+        current_language = self._config_entry.options.get(CONF_NOWCAST_LANGUAGE, DEFAULT_NOWCAST_LANGUAGE)
+        current_interval = self._config_entry.options.get(CONF_NOWCAST_INTERVAL, DEFAULT_NOWCAST_UPDATE_INTERVAL_MINUTES)
 
         return self.async_show_form(
             step_id="init",
@@ -112,6 +128,21 @@ class BmkgOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Required(CONF_ADM4, default=current_adm4): selector.TextSelector(
                         selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
+                    ),
+                    vol.Optional(CONF_NOWCAST_LANGUAGE, default=current_language): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["id", "en"],
+                            mode=selector.SelectSelectorMode.LIST,
+                        )
+                    ),
+                    vol.Optional(CONF_NOWCAST_INTERVAL, default=current_interval): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=MIN_NOWCAST_UPDATE_INTERVAL_MINUTES,
+                            max=MAX_NOWCAST_UPDATE_INTERVAL_MINUTES,
+                            step=5,
+                            unit_of_measurement="minutes",
+                            mode=selector.NumberSelectorMode.SLIDER,
+                        )
                     ),
                 }
             ),

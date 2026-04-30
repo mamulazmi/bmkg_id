@@ -12,7 +12,7 @@ from typing import Any
 import aiohttp
 import async_timeout
 
-from .const import BMKG_API_URL, BMKG_EARTHQUAKE_URL, BMKG_NOWCAST_RSS_URL
+from .const import BMKG_API_URL, BMKG_EARTHQUAKE_URL, BMKG_NOWCAST_RSS_URL, BMKG_NOWCAST_RSS_URL_EN
 
 
 class BmkgApiClientError(Exception):
@@ -150,15 +150,16 @@ class BmkgEarthquakeApiClient:
 class BmkgNowcastApiClient:
     """BMKG Nowcast (weather warning) RSS + CAP client."""
 
-    def __init__(self, session: aiohttp.ClientSession) -> None:
+    def __init__(self, session: aiohttp.ClientSession, language: str = "id") -> None:
         """Initialize client."""
         self._session = session
+        self._rss_url = BMKG_NOWCAST_RSS_URL if language == "id" else BMKG_NOWCAST_RSS_URL_EN
 
     async def async_get_warnings(self) -> list[dict[str, Any]]:
         """Fetch and parse RSS feed, return list of warning dicts."""
         try:
             async with async_timeout.timeout(10):
-                response = await self._session.get(url=BMKG_NOWCAST_RSS_URL)
+                response = await self._session.get(url=self._rss_url)
                 response.raise_for_status()
                 text = await response.text()
         except TimeoutError as exception:
@@ -200,19 +201,28 @@ class BmkgNowcastApiClient:
 
             areas = info.findall("cap:area", ns) or info.findall("area")
             area_descs = []
+            polygons = []
             for area in areas:
                 desc_el = area.find("cap:areaDesc", ns) or area.find("areaDesc")
                 if desc_el is not None and desc_el.text:
                     area_descs.append(desc_el.text.strip())
+                poly_el = area.find("cap:polygon", ns) or area.find("polygon")
+                if poly_el is not None and poly_el.text:
+                    polygons.append(poly_el.text.strip())
 
             return {
+                "event": _t("event"),
                 "severity": _t("severity"),
                 "urgency": _t("urgency"),
                 "certainty": _t("certainty"),
-                "onset": _t("effective"),
+                "effective": _t("effective"),
                 "expires": _t("expires"),
-                "area_desc": ", ".join(area_descs),
+                "sender_name": _t("senderName"),
                 "headline": _t("headline"),
+                "cap_description": _t("description"),
+                "web": _t("web"),
+                "area_desc": ", ".join(area_descs),
+                "polygon": polygons,
             }
         except ET.ParseError:
             return {}

@@ -20,9 +20,11 @@
   "options": {
     "step": {
       "init": {
-        "title": "Ganti Lokasi",
+        "title": "Pengaturan BMKG Weather",
         "data": {
-          "adm4": "Kode ADM4"
+          "adm4": "Kode ADM4",
+          "nowcast_language": "Bahasa Peringatan Dini Cuaca",
+          "nowcast_update_interval": "Interval Update Peringatan (menit)"
         }
       }
     },

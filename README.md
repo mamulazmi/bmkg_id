@@ -74,7 +74,9 @@ Pin gempa otomatis muncul di **Map Card**. Jumlah pin = jumlah gempa di API (bia
 |------|-----|--------|
 | Prakiraan Cuaca | `https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4={kode}` | Setiap 3 jam |
 | Gempa Dirasakan | `https://data.bmkg.go.id/DataMKG/TEWS/gempadirasakan.json` | Setiap 5 menit |
-| Peringatan Dini | `https://www.bmkg.go.id/alerts/nowcast/id` (RSS) | Setiap 15 menit |
+| Peringatan Dini (ID) | `https://www.bmkg.go.id/alerts/nowcast/id` (RSS) | Setiap 15 menit (dapat diatur) |
+| Peringatan Dini (EN) | `https://www.bmkg.go.id/alerts/nowcast/en` (RSS) | Setiap 15 menit (dapat diatur) |
+| Detail CAP | `https://www.bmkg.go.id/alerts/nowcast/{lang}/{kode}_alert.xml` | Via RSS link |
 | Shakemap | `https://static.bmkg.go.id/{kode_shakemap}.jpg` | Via atribut sensor |
 
 ---
@@ -178,9 +180,17 @@ Jika Anda sudah menginstal **HACS** (Home Assistant Community Store):
 
 ---
 
-### Options (Ganti Lokasi)
-Kode ADM4 dapat diubah kapan saja tanpa menghapus integrasi:
+### Options
+Semua opsi berikut dapat diubah kapan saja via:
 **Settings → Devices & Services → BMKG Weather → Configure**
+
+| Opsi | Keterangan | Default |
+|------|------------|---------|
+| **Kode ADM4** | Lokasi prakiraan cuaca | — |
+| **Bahasa Peringatan Dini** | `id` (Indonesia) atau `en` (English) untuk nowcast alert | `id` |
+| **Interval Update Peringatan** | Frekuensi polling nowcast (10–60 menit, step 5) | 15 menit |
+
+> **Catatan rate limit BMKG:** Batas akses API BMKG adalah 60 permintaan per menit per IP. Interval minimum 10 menit sudah aman. Jangan set di bawah itu.
 
 ---
 
@@ -217,6 +227,7 @@ shakemap_url: "https://static.bmkg.go.id/20260429170904.mmi.jpg"
 
 ### Sensor Peringatan Dini
 ```yaml
+# Atribut RSS:
 title: "Hujan Lebat disertai Petir di DKI Jakarta"
 description: "Hujan lebat akan terjadi pada ..."
 author: "cuaca.ekstrem@bmkg.go.id (BMKG)"
@@ -224,13 +235,19 @@ pub_date: "2026-04-29T21:40:00+07:00"
 cap_code: "CJK20260429001"
 link: "https://www.bmkg.go.id/alerts/nowcast/id/CJK20260429001_alert.xml"
 # Atribut CAP XML (hanya muncul saat ada peringatan aktif provinsi):
-severity: "Severe"
-urgency: "Immediate"
-certainty: "Likely"
-onset: "2026-04-29T21:40:00+07:00"
-expires: "2026-04-29T23:40:00+07:00"
-area_desc: "Jakarta Pusat, Jakarta Selatan"
+event: "Hujan Lebat dan Petir"
 headline: "Hujan Lebat disertai Petir"
+cap_description: "Hujan lebat disertai petir akan terjadi pada ..."  # deskripsi lengkap dari CAP
+severity: "Moderate"          # Extreme / Severe / Moderate / Minor / Unknown
+urgency: "Immediate"          # Immediate / Expected / Future / Past / Unknown
+certainty: "Observed"         # Observed / Likely / Possible / Unlikely / Unknown
+effective: "2026-04-29T21:30:00+07:00"   # waktu mulai (ISO 8601)
+expires: "2026-04-29T23:30:00+07:00"     # waktu berakhir (ISO 8601)
+sender_name: "Badan Meteorologi Klimatologi dan Geofisika"
+web: "https://nowcasting.bmkg.go.id/infografis/CJK/2026/04/29/infografis.jpg"
+area_desc: "Jakarta Pusat, Jakarta Selatan"
+polygon:                       # koordinat lat,lon area terdampak
+  - "-6.121,106.774 -6.134,106.789 ..."
 ```
 
 ---
@@ -284,7 +301,7 @@ automation:
 ```
 custom_components/bmkg_id/
 ├── __init__.py              # Setup/unload integration
-├── manifest.json            # Metadata HA (version: 1.1.0)
+├── manifest.json            # Metadata HA (version: 1.1.1)
 ├── config_flow.py           # UI wizard + options
 ├── coordinator.py           # Polling cuaca (3 jam)
 ├── earthquake_coordinator.py # Polling gempa (5 menit)
@@ -298,8 +315,10 @@ custom_components/bmkg_id/
 ├── nowcast_sensor.py        # Sensor peringatan dini
 ├── weather.py               # WeatherEntity + BMKG condition mapping
 ├── geo_location.py          # Geo location pins gempa di HA Map
+├── icon.png                 # Logo integrasi (256x256)
 ├── images/
-│   └── icon.svg             # Logo integrasi
+│   ├── icon.png             # Sumber logo
+│   └── icon.svg             # Logo vektor
 ├── strings.json             # UI strings
 └── translations/
     ├── en.json
