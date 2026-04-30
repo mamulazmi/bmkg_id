@@ -279,18 +279,13 @@ class BmkgNowcastApiClient:
     def filter_by_province(
         warnings: list[dict[str, Any]], province: str
     ) -> list[dict[str, Any]]:
-        """Return warnings where ALL significant province words appear in title or description."""
+        """Return warnings where province name appears as exact phrase in title."""
         if not province:
             return []
-        words = [w.lower() for w in province.split() if len(w) > 2]
-        if not words:
-            return []
+        phrase = province.lower()
         return [
             w for w in warnings
-            if all(
-                word in (w.get("title", "") + " " + w.get("description", "")).lower()
-                for word in words
-            )
+            if phrase in w.get("title", "").lower()
         ]
 
     @staticmethod

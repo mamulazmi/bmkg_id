@@ -257,10 +257,11 @@ class TestFilterByProvince:
         assert len(result) == 1
         assert "DKI Jakarta" in result[0]["title"]
 
-    def test_matches_province_in_description(self):
+    def test_description_only_not_matched(self):
+        # Province in description only — title doesn't contain phrase → no match
         warnings = [{"title": "Test", "description": "Hujan di DKI Jakarta"}]
         result = BmkgNowcastApiClient.filter_by_province(warnings, "DKI Jakarta")
-        assert len(result) == 1
+        assert result == []
 
     def test_no_match_returns_empty(self):
         result = BmkgNowcastApiClient.filter_by_province(self.WARNINGS, "Bali")
@@ -278,12 +279,13 @@ class TestFilterByProvince:
         assert BmkgNowcastApiClient.filter_by_province([], "Jawa") == []
 
     def test_province_with_di_prefix_matches(self):
+        # "DI YOGYAKARTA" phrase "di yogyakarta" is substring of "hujan di yogyakarta"
         warnings = [{"title": "Hujan di Yogyakarta", "description": ""}]
         result = BmkgNowcastApiClient.filter_by_province(warnings, "DI YOGYAKARTA")
         assert len(result) == 1
 
-    def test_province_all_words_required_no_false_positive(self):
-        # "SULAWESI UTARA" must NOT match "Maluku Utara" (needs both "sulawesi" AND "utara")
+    def test_phrase_no_false_positive_partial_word(self):
+        # "SULAWESI UTARA" phrase not in "Maluku Utara" title
         warnings = [{"title": "Hujan di Maluku Utara", "description": ""}]
         result = BmkgNowcastApiClient.filter_by_province(warnings, "SULAWESI UTARA")
         assert result == []
@@ -293,8 +295,18 @@ class TestFilterByProvince:
         result = BmkgNowcastApiClient.filter_by_province(warnings, "KALIMANTAN SELATAN")
         assert len(result) == 1
 
-    def test_all_words_required_not_any(self):
-        # "KALIMANTAN UTARA" must NOT match titles with only one word
+    def test_kalteng_not_matched_for_kalsel_province(self):
+        # Real-world bug: KalTeng warning description mentions KalSel → old word-split matched falsely
+        warnings = [
+            {"title": "Thunderstorm in Kalimantan Tengah", "description": "...berlaku juga di Kalimantan Selatan..."},
+            {"title": "Thunderstorm in Kalimantan Selatan", "description": ""},
+        ]
+        result = BmkgNowcastApiClient.filter_by_province(warnings, "KALIMANTAN SELATAN")
+        assert len(result) == 1
+        assert "Kalimantan Selatan" in result[0]["title"]
+
+    def test_phrase_not_matched_by_partial_title_words(self):
+        # "KALIMANTAN UTARA" phrase not in either title
         warnings = [
             {"title": "Hujan di Maluku Utara", "description": ""},
             {"title": "Hujan di Kalimantan Selatan", "description": ""},
