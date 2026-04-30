@@ -83,6 +83,18 @@ class BmkgNowcastCoordinator(DataUpdateCoordinator):
             if code and code in self._cap_cache:
                 warning.update(self._cap_cache[code])
 
+        ha_lat: float = self.hass.config.latitude
+        ha_lon: float = self.hass.config.longitude
+        home_alert: dict | None = None
+        for warning in province_warnings:
+            for poly_str in (warning.get("polygon") or []):
+                polygon = BmkgNowcastApiClient.parse_polygon(poly_str)
+                if BmkgNowcastApiClient.point_in_polygon(ha_lat, ha_lon, polygon):
+                    home_alert = warning
+                    break
+            if home_alert:
+                break
+
         return {
             "all_warnings": warnings,
             "province_warnings": province_warnings,
@@ -91,4 +103,6 @@ class BmkgNowcastCoordinator(DataUpdateCoordinator):
             "latest_province": latest_province,
             "latest_all": latest_all,
             "province": province,
+            "home_in_alert": home_alert is not None,
+            "home_alert": home_alert,
         }

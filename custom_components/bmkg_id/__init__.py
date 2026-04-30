@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from .data import BmkgConfigEntry
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.WEATHER, Platform.GEO_LOCATION]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.WEATHER, Platform.GEO_LOCATION]
 
 
 async def async_setup_entry(

@@ -12,7 +12,7 @@ from typing import Any
 import aiohttp
 import async_timeout
 
-from .const import BMKG_API_URL, BMKG_EARTHQUAKE_URL, BMKG_NOWCAST_RSS_URL, BMKG_NOWCAST_RSS_URL_EN
+from .const import BMKG_API_URL, BMKG_EARTHQUAKE_URL, BMKG_NOWCAST_RSS_URL, BMKG_NOWCAST_RSS_URL_EN, LOGGER
 
 
 class BmkgApiClientError(Exception):
@@ -181,7 +181,8 @@ class BmkgNowcastApiClient:
                 response = await self._session.get(url=url)
                 response.raise_for_status()
                 text = await response.text()
-        except Exception:
+        except Exception as exc:
+            LOGGER.debug("CAP XML fetch failed %s: %s", url, exc)
             return {}
         return self._parse_cap_xml(text)
 
@@ -191,22 +192,30 @@ class BmkgNowcastApiClient:
         try:
             root = ET.fromstring(xml_text)
             ns = {"cap": "urn:oasis:names:tc:emergency:cap:1.2"}
-            info = root.find("cap:info", ns) or root.find("info")
+            info = root.find("cap:info", ns)
+            if info is None:
+                info = root.find("info")
             if info is None:
                 return {}
 
             def _t(tag: str) -> str:
-                el = info.find(f"cap:{tag}", ns) or info.find(tag)
+                el = info.find(f"cap:{tag}", ns)
+                if el is None:
+                    el = info.find(tag)
                 return el.text.strip() if el is not None and el.text else ""
 
             areas = info.findall("cap:area", ns) or info.findall("area")
             area_descs = []
             polygons = []
             for area in areas:
-                desc_el = area.find("cap:areaDesc", ns) or area.find("areaDesc")
+                desc_el = area.find("cap:areaDesc", ns)
+                if desc_el is None:
+                    desc_el = area.find("areaDesc")
                 if desc_el is not None and desc_el.text:
                     area_descs.append(desc_el.text.strip())
-                poly_el = area.find("cap:polygon", ns) or area.find("polygon")
+                poly_el = area.find("cap:polygon", ns)
+                if poly_el is None:
+                    poly_el = area.find("polygon")
                 if poly_el is not None and poly_el.text:
                     polygons.append(poly_el.text.strip())
 
@@ -270,12 +279,46 @@ class BmkgNowcastApiClient:
     def filter_by_province(
         warnings: list[dict[str, Any]], province: str
     ) -> list[dict[str, Any]]:
-        """Return warnings whose title or description mentions the province."""
+        """Return warnings where ALL significant province words appear in title or description."""
         if not province:
             return []
-        province_lower = province.lower()
+        words = [w.lower() for w in province.split() if len(w) > 2]
+        if not words:
+            return []
         return [
             w for w in warnings
-            if province_lower in w.get("title", "").lower()
-            or province_lower in w.get("description", "").lower()
+            if all(
+                word in (w.get("title", "") + " " + w.get("description", "")).lower()
+                for word in words
+            )
         ]
+
+    @staticmethod
+    def parse_polygon(polygon_str: str) -> list[tuple[float, float]]:
+        """Parse CAP polygon string 'lat,lon lat,lon ...' → list of (lat, lon)."""
+        points = []
+        for pair in polygon_str.strip().split():
+            try:
+                lat, lon = pair.split(",")
+                points.append((float(lat), float(lon)))
+            except ValueError:
+                continue
+        return points
+
+    @staticmethod
+    def point_in_polygon(lat: float, lon: float, polygon: list[tuple[float, float]]) -> bool:
+        """Ray casting algorithm. Returns True if (lat, lon) is inside polygon."""
+        n = len(polygon)
+        if n < 3:
+            return False
+        inside = False
+        j = n - 1
+        for i in range(n):
+            lat_i, lon_i = polygon[i]
+            lat_j, lon_j = polygon[j]
+            if (lat_i > lat) != (lat_j > lat):
+                lon_cross = lon_j + (lat - lat_j) / (lat_i - lat_j) * (lon_i - lon_j)
+                if lon < lon_cross:
+                    inside = not inside
+            j = i
+        return inside

@@ -13,7 +13,15 @@ from custom_components.bmkg_id.api import (
     BmkgApiClient,
 )
 
-from .const import MOCK_RSS_XML, MOCK_RSS_XML_EMPTY, MOCK_RSS_XML_MALFORMED
+from .const import (
+    MOCK_RSS_XML,
+    MOCK_RSS_XML_EMPTY,
+    MOCK_RSS_XML_MALFORMED,
+    MOCK_CAP_XML,
+    MOCK_CAP_XML_NO_POLYGON,
+    MOCK_CAP_XML_MALFORMED,
+    MOCK_POLYGON_STR,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -268,3 +276,121 @@ class TestFilterByProvince:
 
     def test_empty_warnings_list(self):
         assert BmkgNowcastApiClient.filter_by_province([], "Jawa") == []
+
+    def test_province_with_di_prefix_matches(self):
+        warnings = [{"title": "Hujan di Yogyakarta", "description": ""}]
+        result = BmkgNowcastApiClient.filter_by_province(warnings, "DI YOGYAKARTA")
+        assert len(result) == 1
+
+    def test_province_all_words_required_no_false_positive(self):
+        # "SULAWESI UTARA" must NOT match "Maluku Utara" (needs both "sulawesi" AND "utara")
+        warnings = [{"title": "Hujan di Maluku Utara", "description": ""}]
+        result = BmkgNowcastApiClient.filter_by_province(warnings, "SULAWESI UTARA")
+        assert result == []
+
+    def test_province_kalimantan_selatan_matches(self):
+        warnings = [{"title": "Hujan Lebat disertai Petir di Kalimantan Selatan", "description": ""}]
+        result = BmkgNowcastApiClient.filter_by_province(warnings, "KALIMANTAN SELATAN")
+        assert len(result) == 1
+
+    def test_all_words_required_not_any(self):
+        # "KALIMANTAN UTARA" must NOT match titles with only one word
+        warnings = [
+            {"title": "Hujan di Maluku Utara", "description": ""},
+            {"title": "Hujan di Kalimantan Selatan", "description": ""},
+        ]
+        result = BmkgNowcastApiClient.filter_by_province(warnings, "KALIMANTAN UTARA")
+        assert result == []
+
+
+# ---------------------------------------------------------------------------
+# BmkgNowcastApiClient._parse_cap_xml
+# ---------------------------------------------------------------------------
+
+
+class TestParseCapXml:
+    def test_all_fields_extracted(self):
+        result = BmkgNowcastApiClient._parse_cap_xml(MOCK_CAP_XML)
+        assert result["event"] == "Hujan Lebat dan Petir"
+        assert result["severity"] == "Moderate"
+        assert result["urgency"] == "Immediate"
+        assert result["certainty"] == "Observed"
+        assert result["effective"] == "2026-04-30T08:30:00+07:00"
+        assert result["expires"] == "2026-04-30T10:30:00+07:00"
+        assert result["sender_name"] == "Badan Meteorologi Klimatologi dan Geofisika"
+        assert result["headline"] == "Hujan Lebat disertai Petir di Jawa Timur"
+        assert "hujan lebat" in result["cap_description"].lower()
+        assert result["web"].startswith("https://nowcasting.bmkg.go.id")
+        assert result["area_desc"] == "Jawa Timur"
+
+    def test_polygon_extracted(self):
+        result = BmkgNowcastApiClient._parse_cap_xml(MOCK_CAP_XML)
+        assert isinstance(result["polygon"], list)
+        assert len(result["polygon"]) == 1
+        assert "-7.1,113.2" in result["polygon"][0]
+
+    def test_no_polygon_returns_empty_list(self):
+        result = BmkgNowcastApiClient._parse_cap_xml(MOCK_CAP_XML_NO_POLYGON)
+        assert result["polygon"] == []
+
+    def test_malformed_xml_returns_empty_dict(self):
+        result = BmkgNowcastApiClient._parse_cap_xml(MOCK_CAP_XML_MALFORMED)
+        assert result == {}
+
+    def test_result_is_truthy(self):
+        result = BmkgNowcastApiClient._parse_cap_xml(MOCK_CAP_XML)
+        assert bool(result) is True
+
+    def test_no_onset_key(self):
+        result = BmkgNowcastApiClient._parse_cap_xml(MOCK_CAP_XML)
+        assert "onset" not in result
+        assert "effective" in result
+
+
+# ---------------------------------------------------------------------------
+# BmkgNowcastApiClient.parse_polygon
+# ---------------------------------------------------------------------------
+
+
+class TestParsePolygon:
+    def test_valid_polygon_string(self):
+        result = BmkgNowcastApiClient.parse_polygon(MOCK_POLYGON_STR)
+        assert len(result) == 5
+        assert result[0] == (-6.0, 106.0)
+        assert result[2] == (-7.0, 107.0)
+
+    def test_empty_string_returns_empty(self):
+        assert BmkgNowcastApiClient.parse_polygon("") == []
+
+    def test_malformed_pair_skipped(self):
+        result = BmkgNowcastApiClient.parse_polygon("-6.0,106.0 INVALID -7.0,107.0")
+        assert len(result) == 2
+
+    def test_single_point(self):
+        result = BmkgNowcastApiClient.parse_polygon("-6.5,106.5")
+        assert result == [(-6.5, 106.5)]
+
+
+# ---------------------------------------------------------------------------
+# BmkgNowcastApiClient.point_in_polygon
+# ---------------------------------------------------------------------------
+
+
+class TestPointInPolygon:
+    # Square: lat -6.0 to -7.0, lon 106.0 to 107.0
+    SQUARE = [(-6.0, 106.0), (-6.0, 107.0), (-7.0, 107.0), (-7.0, 106.0)]
+
+    def test_point_inside_returns_true(self):
+        assert BmkgNowcastApiClient.point_in_polygon(-6.5, 106.5, self.SQUARE) is True
+
+    def test_point_outside_returns_false(self):
+        assert BmkgNowcastApiClient.point_in_polygon(-8.0, 110.0, self.SQUARE) is False
+
+    def test_point_far_outside(self):
+        assert BmkgNowcastApiClient.point_in_polygon(0.0, 0.0, self.SQUARE) is False
+
+    def test_too_few_points_returns_false(self):
+        assert BmkgNowcastApiClient.point_in_polygon(-6.5, 106.5, [(-6.0, 106.0), (-6.0, 107.0)]) is False
+
+    def test_empty_polygon_returns_false(self):
+        assert BmkgNowcastApiClient.point_in_polygon(-6.5, 106.5, []) is False

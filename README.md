@@ -25,6 +25,11 @@ Custom integration untuk Home Assistant yang menampilkan data cuaca, gempa bumi,
 |-----------|------------|
 | `weather.bmkg_*` | Cuaca saat ini + forecast 3-jam. Gunakan di **Weather Forecast Card** |
 
+### Binary Sensor (1 entity)
+| Entity ID | Keterangan |
+|-----------|------------|
+| `binary_sensor.bmkg_*_home_in_alert_area` | `on` jika koordinat HA berada di dalam polygon area peringatan CAP aktif. Attributes: `event`, `severity`, `effective`, `expires`, `area_desc`, `web`, `cap_code` |
+
 ### Geo Location (dinamis)
 Pin gempa otomatis muncul di **Map Card**. Jumlah pin = jumlah gempa di API (biasanya 15 gempa terakhir yang dirasakan). Setiap pin berisi magnitudo, kedalaman, wilayah, dan link shakemap.
 
@@ -63,7 +68,7 @@ Pin gempa otomatis muncul di **Map Card**. Jumlah pin = jumlah gempa di API (bia
 | `sensor.bmkg_*_active_warnings_province` | Jumlah peringatan aktif di provinsi |
 | `sensor.bmkg_*_active_warnings_national` | Total peringatan aktif nasional |
 | `sensor.bmkg_*_province_warning_title` | Judul peringatan terbaru provinsi |
-| `sensor.bmkg_*_province_warning_description` | Deskripsi peringatan terbaru provinsi |
+| `sensor.bmkg_*_province_warning_description` | Deskripsi peringatan terbaru provinsi (maks. 255 karakter — teks lengkap di attribute `description`) |
 | `sensor.bmkg_*_latest_national_warning_title` | Judul peringatan terbaru nasional |
 
 ---
@@ -293,6 +298,24 @@ automation:
           message: "{{ states('sensor.bmkg_gambir_province_warning_title') }}"
 ```
 
+### Notifikasi Saat Rumah Masuk Area Peringatan (Polygon-based)
+```yaml
+automation:
+  - alias: "BMKG Alert di Area Rumah"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.bmkg_gambir_home_in_alert_area
+        to: "on"
+    action:
+      - service: notify.mobile_app
+        data:
+          title: "⛈️ Peringatan Cuaca di Lokasi Anda"
+          message: >
+            {{ state_attr('binary_sensor.bmkg_gambir_home_in_alert_area', 'event') }}
+            — {{ state_attr('binary_sensor.bmkg_gambir_home_in_alert_area', 'area_desc') }}
+            (s/d {{ state_attr('binary_sensor.bmkg_gambir_home_in_alert_area', 'expires') }})
+```
+
 ---
 
 ## Pengembangan
@@ -301,7 +324,7 @@ automation:
 ```
 custom_components/bmkg_id/
 ├── __init__.py              # Setup/unload integration
-├── manifest.json            # Metadata HA (version: 1.1.1)
+├── manifest.json            # Metadata HA (version: 1.1.3)
 ├── config_flow.py           # UI wizard + options
 ├── coordinator.py           # Polling cuaca (3 jam)
 ├── earthquake_coordinator.py # Polling gempa (5 menit)
@@ -314,6 +337,7 @@ custom_components/bmkg_id/
 ├── earthquake_sensor.py     # Sensor gempa
 ├── nowcast_sensor.py        # Sensor peringatan dini
 ├── weather.py               # WeatherEntity + BMKG condition mapping
+├── binary_sensor.py         # Binary sensor: home in alert polygon area
 ├── geo_location.py          # Geo location pins gempa di HA Map
 ├── icon.png                 # Logo integrasi (256x256)
 ├── images/

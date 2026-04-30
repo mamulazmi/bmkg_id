@@ -113,7 +113,8 @@ class BmkgNowcastSensor(CoordinatorEntity[BmkgNowcastCoordinator], SensorEntity)
         warning = data.get(self.entity_description.warning_source)
         if warning is None:
             return ""
-        return warning.get(self.entity_description.data_key) or ""
+        value = warning.get(self.entity_description.data_key) or ""
+        return value[:255] if isinstance(value, str) else value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

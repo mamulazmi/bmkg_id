@@ -109,3 +109,46 @@ MOCK_RSS_XML_EMPTY = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel/></rss>"""
 
 MOCK_RSS_XML_MALFORMED = "NOT VALID XML <<<"
+
+MOCK_CAP_XML = """<?xml version="1.0"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <info>
+    <event>Hujan Lebat dan Petir</event>
+    <urgency>Immediate</urgency>
+    <severity>Moderate</severity>
+    <certainty>Observed</certainty>
+    <effective>2026-04-30T08:30:00+07:00</effective>
+    <expires>2026-04-30T10:30:00+07:00</expires>
+    <senderName>Badan Meteorologi Klimatologi dan Geofisika</senderName>
+    <headline>Hujan Lebat disertai Petir di Jawa Timur</headline>
+    <description>Hujan lebat disertai petir akan terjadi di sebagian wilayah Jawa Timur.</description>
+    <web>https://nowcasting.bmkg.go.id/infografis/CJT/2026/04/30/infografis.jpg</web>
+    <area>
+      <areaDesc>Jawa Timur</areaDesc>
+      <polygon>-7.1,113.2 -7.2,113.3 -7.3,113.1 -7.1,113.2</polygon>
+    </area>
+  </info>
+</alert>"""
+
+MOCK_CAP_XML_NO_POLYGON = """<?xml version="1.0"?>
+<alert xmlns="urn:oasis:names:tc:emergency:cap:1.2">
+  <info>
+    <event>Hujan Lebat</event>
+    <severity>Minor</severity>
+    <urgency>Expected</urgency>
+    <certainty>Possible</certainty>
+    <effective>2026-04-30T08:00:00+07:00</effective>
+    <expires>2026-04-30T10:00:00+07:00</expires>
+    <senderName>BMKG</senderName>
+    <headline>Hujan</headline>
+    <description>Hujan.</description>
+    <web>https://example.com/img.jpg</web>
+    <area><areaDesc>Sulawesi Tengah</areaDesc></area>
+  </info>
+</alert>"""
+
+MOCK_CAP_XML_MALFORMED = "NOT VALID XML <<<"
+
+# Simple square polygon: lat -6.0 to -7.0, lon 106.0 to 107.0
+# Inside: (-6.5, 106.5) — Outside: (-8.0, 110.0)
+MOCK_POLYGON_STR = "-6.0,106.0 -6.0,107.0 -7.0,107.0 -7.0,106.0 -6.0,106.0"
