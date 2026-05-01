@@ -14,6 +14,12 @@ import async_timeout
 
 from .const import BMKG_API_URL, BMKG_EARTHQUAKE_URL, BMKG_NOWCAST_RSS_URL, BMKG_NOWCAST_RSS_URL_EN, LOGGER
 
+_BMKG_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "application/json,application/xml,text/xml,*/*",
+    "Referer": "https://www.bmkg.go.id/",
+}
+
 
 class BmkgApiClientError(Exception):
     """General API error."""
@@ -38,6 +44,7 @@ class BmkgApiClient:
                 response = await self._session.get(
                     url=BMKG_API_URL,
                     params={"adm4": self._adm4},
+                    headers=_BMKG_HEADERS,
                 )
                 response.raise_for_status()
                 return await response.json()
@@ -92,7 +99,7 @@ class BmkgEarthquakeApiClient:
         """Fetch felt earthquake list from BMKG."""
         try:
             async with async_timeout.timeout(10):
-                response = await self._session.get(url=BMKG_EARTHQUAKE_URL)
+                response = await self._session.get(url=BMKG_EARTHQUAKE_URL, headers=_BMKG_HEADERS)
                 response.raise_for_status()
                 data = await response.json(content_type=None)
                 return data.get("Infogempa", {}).get("gempa", [])
@@ -159,7 +166,7 @@ class BmkgNowcastApiClient:
         """Fetch and parse RSS feed, return list of warning dicts."""
         try:
             async with async_timeout.timeout(10):
-                response = await self._session.get(url=self._rss_url)
+                response = await self._session.get(url=self._rss_url, headers=_BMKG_HEADERS)
                 response.raise_for_status()
                 text = await response.text()
         except TimeoutError as exception:
@@ -178,7 +185,7 @@ class BmkgNowcastApiClient:
         """Fetch and parse a single CAP XML alert file."""
         try:
             async with async_timeout.timeout(10):
-                response = await self._session.get(url=url)
+                response = await self._session.get(url=url, headers=_BMKG_HEADERS)
                 response.raise_for_status()
                 text = await response.text()
         except Exception as exc:
