@@ -220,11 +220,9 @@ class BmkgNowcastApiClient:
                     desc_el = area.find("areaDesc")
                 if desc_el is not None and desc_el.text:
                     area_descs.append(desc_el.text.strip())
-                poly_el = area.find("cap:polygon", ns)
-                if poly_el is None:
-                    poly_el = area.find("polygon")
-                if poly_el is not None and poly_el.text:
-                    polygons.append(poly_el.text.strip())
+                for poly_el in (area.findall("cap:polygon", ns) or area.findall("polygon")):
+                    if poly_el.text:
+                        polygons.append(poly_el.text.strip())
 
             return {
                 "event": _t("event"),
