@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -63,7 +63,6 @@ class BmkgNowcastCoordinator(DataUpdateCoordinator):
         from .api import BmkgNowcastApiClient  # noqa: PLC0415
 
         province_warnings = BmkgNowcastApiClient.filter_by_province(warnings, province)
-        latest_province = province_warnings[0] if province_warnings else None
         latest_all = warnings[0] if warnings else None
 
         # Cleanup stale cap_codes from cache
@@ -83,10 +82,22 @@ class BmkgNowcastCoordinator(DataUpdateCoordinator):
             if code and code in self._cap_cache:
                 warning.update(self._cap_cache[code])
 
+        now = datetime.now(timezone.utc)
+        active_province_warnings = []
+        for warning in province_warnings:
+            expires_str = warning.get("expires", "")
+            if expires_str:
+                try:
+                    if datetime.fromisoformat(expires_str) < now:
+                        continue
+                except ValueError:
+                    pass
+            active_province_warnings.append(warning)
+
         ha_lat: float = self.hass.config.latitude
         ha_lon: float = self.hass.config.longitude
         home_alert: dict | None = None
-        for warning in province_warnings:
+        for warning in active_province_warnings:
             for poly_str in (warning.get("polygon") or []):
                 polygon = BmkgNowcastApiClient.parse_polygon(poly_str)
                 if BmkgNowcastApiClient.point_in_polygon(ha_lat, ha_lon, polygon):
@@ -97,10 +108,10 @@ class BmkgNowcastCoordinator(DataUpdateCoordinator):
 
         return {
             "all_warnings": warnings,
-            "province_warnings": province_warnings,
-            "province_warning_count": len(province_warnings),
+            "province_warnings": active_province_warnings,
+            "province_warning_count": len(active_province_warnings),
             "total_warning_count": len(warnings),
-            "latest_province": latest_province,
+            "latest_province": active_province_warnings[0] if active_province_warnings else None,
             "latest_all": latest_all,
             "province": province,
             "home_in_alert": home_alert is not None,
